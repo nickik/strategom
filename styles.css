@@ -1,0 +1,25 @@
+.tile {
+    width: 40px;
+    height: 40px;
+    overflow: hidden;
+    display: inline-block;
+    white-space: nowrap;
+}
+
+#wrapper {
+    width: 700px;
+    overflow: hidden; /* will contain if #first is longer than #second */
+}
+
+#unit-table {
+    width: 200px;
+    float:left;
+}
+
+.units {
+  width: 200px;
+}
+
+#board {
+    overflow: hidden;
+}
