@@ -4,6 +4,17 @@
 
 (enable-console-print!)
 
+(defn count-units [board color]
+  (frequencies
+   (filter identity (map (fn [[key {:keys [unit]}]]
+                           (when (= (:color unit)
+                                    color)
+                             (:type unit)))
+                         board))))
+
+(defn count-unit [board type color]
+  (type (count-units board color)))
+
 (def app-state (atom {:test "1234"
                       :board {[2 1] {:ground :land, :unit {:type :lieutenant, :color :red}},
                               [3 2] {:ground :land, :unit {:type :sergeant, :color :red}},
@@ -58,21 +69,17 @@
                               [7 5] {:ground :land, :unit {:type :major, :color :blue}}, [8 6] {:ground :land, :unit {:type :captain, :color :blue}},
                               [9 7] {:ground :land, :unit {:type :general, :color :blue}}, [2 0] {:ground :land, :unit {:type :sergeant, :color :red}}}}))
 
-(comment
-  (defn unit-row [u bgc]
+(defn unit-row [[unit-type n] bgc]
     (let [st #js {:backgroundColor bgc}]
-      (dom/tr #js {:className "unit-class" :style st}
-              (dom/td nil (:name u))
-              (dom/td nil (:count u)))))
+      (dom/tr #js {:className "units" :style st}
+              (dom/td nil (str unit-type))
+              (dom/td nil (str n)))))
 
-  (om/root
-   app-state
-   (fn [app owner]
-     (apply dom/table #js {:className "units"}
-            (map unit-row
-                 (sort-by :count (vals app))
-                 (cycle ["#f90" "#fff"]))))
-   (. js/document (getElementById "unit-table"))))
+(defn renter-unit-table [units-alive-counts]
+  (apply dom/table #js {:className "units"}
+         (map unit-row
+              units-alive-counts
+              (cycle ["#f90" "#fff"]))))
 
 
 (defn render-tile [board pos]
@@ -84,15 +91,13 @@
             (if (:color unit)
               (cond
                (= (:color unit) :blue) (str (:type unit))
-               (= (:color unit) :red) (str "blue")
+               (= (:color unit) :red) (str "red")
                :else "")
               ""))))
 
 (defn render-row [board positions]
   (apply dom/tr nil
          (map #(render-tile board %) positions)))
-
-(comment  #(dom/td nil (str %)))
 
 (defn stratego-app [data owner]
   (reify
@@ -101,6 +106,8 @@
             (dom/div nil
                (dom/header #js {:id "header"})
                (dom/h1 nil "Stratego")
+               (dom/div #js {:id "unit-table"}
+                        (renter-unit-table (count-units (:board data) :blue)))
                (dom/div #js {:id "board"}
                         (apply dom/table #js {:className "board"}
                                (map #(render-row (:board data) %)
@@ -110,3 +117,17 @@
  app-state
  stratego-app
  (. js/document (getElementById "stratego-app")))
+
+
+(defn apply-to-board [a f & args]
+  (let [b (:board current)]
+     (assoc current :board (apply f b args))))
+
+(defn set-unit [field pos unit]
+  (assoc-in field [pos :unit] unit))
+
+(comment (swap! app-state assoc-in [:board [5 1] :unit] {:type :flag :color :blue}))
+
+(def transition-board (partial swap! app-state apply-to-board))
+
+(comment (transition-board set-unit [5 1] {:unit :flag :color :blue}))
